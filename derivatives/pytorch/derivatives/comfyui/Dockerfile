@@ -1,15 +1,15 @@
 ARG PYTORCH_BASE=vastai/pytorch:2.12.0-cu130-cuda-13.2-mini-py312-2026-06-15
-
+ 
 FROM ${PYTORCH_BASE}
-
+ 
 # Maintainer details
 LABEL org.opencontainers.image.source="https://github.com/vastai/"
 LABEL org.opencontainers.image.description="ComfyUI image suitable for Vast.ai."
 LABEL maintainer="Vast.ai Inc <contact@vast.ai>"
-
+ 
 # Copy Supervisor configuration and startup scripts
 COPY ./ROOT /
-
+ 
 # Start the instance test runner before provisioning, not after.
 # The base image still ships the boot script as 85-instance-test.sh (it runs
 # after 75-provisioning-manifest.sh); rename it to 70- so the test runner's
@@ -26,10 +26,10 @@ RUN if [ -f /etc/vast_boot.d/85-instance-test.sh ]; then \
         mv -n /etc/vast_boot.d/85-instance-test.sh /etc/vast_boot.d/70-instance-test.sh; \
         rm -f /etc/vast_boot.d/85-instance-test.sh; \
     fi
-
+ 
 # Required or we will not build
 ARG COMFYUI_REF
-
+ 
 RUN \
     set -euo pipefail && \
     [[ -n "${COMFYUI_REF}" ]] || { echo "Must specify COMFYUI_REF" && exit 1; } && \
@@ -90,6 +90,15 @@ RUN \
     git clone https://github.com/SethRobinson/comfyui-workflow-to-api-converter-endpoint && \
     # Build SageAttention2 from source (compiled kernel, not a generic wheel) —
     # links against the exact torch/CUDA build already installed above.
+    #
+    # NOTE on parallelism: this compiles 4 separate CUDA extensions
+    # (_qattn_sm80, _qattn_sm89, _qattn_sm90, _fused). Higher EXT_PARALLEL /
+    # NVCC_APPEND_FLAGS(--threads) / MAX_JOBS values spawn many concurrent
+    # nvcc processes, each of which can use several GB of RAM. On a
+    # memory-constrained CI runner (e.g. GitHub-hosted ubuntu-latest, ~7GB
+    # RAM) this reliably OOMs and kills the build with no clear error beyond
+    # "runner received a shutdown signal". Keep parallelism low here; raise
+    # it only on hosts with more RAM to spare.
     if [[ "$(dpkg --print-architecture)" == "amd64" ]]; then \
         apt-get update && \
         apt-get install -y --no-install-recommends libcusparse-dev-13-2 libcublas-dev-13-2 libcusolver-dev-13-2 && \
@@ -98,7 +107,7 @@ RUN \
         cd /opt && \
         git clone --depth 1 --branch v2.2.0 https://github.com/thu-ml/SageAttention.git && \
         cd SageAttention && \
-        TORCH_CUDA_ARCH_LIST="9.0;12.0" EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 4" MAX_JOBS=8 python setup.py install; \
+        TORCH_CUDA_ARCH_LIST="9.0;12.0" EXT_PARALLEL=1 NVCC_APPEND_FLAGS="--threads 1" MAX_JOBS=2 python setup.py install; \
     fi && \
     # Quick startup test in CPU mode to ensure requirements ready and startup succeeds
     cd /opt/workspace-internal/ComfyUI && \
@@ -115,9 +124,9 @@ RUN \
     # torch-only check used to miss.
     torch_versions_post="$({ pip list --format=freeze 2>/dev/null | grep -E '^(torch|torchvision|torchaudio|torchcodec)==' || :; } | sort)" && \
     [[ "$torch_versions_pre" = "$torch_versions_post" ]] || { echo "torch ecosystem version drift:"; diff <(echo "$torch_versions_pre") <(echo "$torch_versions_post"); exit 1; }
-
+ 
 ENV COMFYUI_ARGS="--disable-auto-launch --enable-cors-header --use-sage-attention --port 18188"
-
+ 
 # Install API wrapper
 RUN \
     set -euo pipefail && \
@@ -132,7 +141,7 @@ RUN \
     deactivate && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
+ 
 # Generally we do not ship with models, but this is used for benchmarking the comfyui-json pyworker
 # Always use a new RUN or COPY for each model added to keep layers to a reasonable size
 RUN \
@@ -146,8 +155,9 @@ RUN \
         /opt/workspace-internal/ComfyUI/models/checkpoints/v1-5-pruned-emaonly-fp16.safetensors && \
     rm -rf /opt/model_store/.cache && \
     rm -rf /root/.cache/huggingface
-
+ 
 # Defend against environment clashes when syncing to volume
 RUN \
     set -euo pipefail && \
     env-hash > /.env_hash
+ 
