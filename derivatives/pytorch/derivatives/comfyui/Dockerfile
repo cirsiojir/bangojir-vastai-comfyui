@@ -94,7 +94,7 @@ RUN \
         cd /opt && \
         git clone --depth 1 --branch v2.2.0 https://github.com/thu-ml/SageAttention.git && \
         cd SageAttention && \
-        EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 4" MAX_JOBS=8 python setup.py install; \
+        TORCH_CUDA_ARCH_LIST="9.0;12.0" EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 4" MAX_JOBS=8 python setup.py install; \
     fi && \
     # Quick startup test in CPU mode to ensure requirements ready and startup succeeds
     cd /opt/workspace-internal/ComfyUI && \
