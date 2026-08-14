@@ -46,7 +46,7 @@ RUN \
     # silently mis-select amd64 when buildx hasn't injected TARGETARCH.
     EXTRA_ACCEL_PKGS="" && \
     if [[ "$(dpkg --print-architecture)" == "amd64" ]]; then \
-        EXTRA_ACCEL_PKGS="xformers sageattention==1.0.6"; \
+        EXTRA_ACCEL_PKGS="xformers"; \
     fi && \
     # Fail build on dependency resolution if matching version is unavailable
     uv pip install --no-cache-dir torch=="${PYTORCH_VERSION}" ${EXTRA_ACCEL_PKGS} --torch-backend "${PYTORCH_BACKEND}" && \
