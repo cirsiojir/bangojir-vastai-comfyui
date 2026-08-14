@@ -88,6 +88,14 @@ RUN \
     sed -i -E '/^(torch|torchvision|torchaudio|torchcodec)([[:space:]]|[<>=!])/d' ComfyUI-Manager/requirements.txt && \
     uv pip install --no-cache-dir -r ComfyUI-Manager/requirements.txt && \
     git clone https://github.com/SethRobinson/comfyui-workflow-to-api-converter-endpoint && \
+    # Build SageAttention2 from source (compiled kernel, not a generic wheel) —
+    # links against the exact torch/CUDA build already installed above.
+    if [[ "$(dpkg --print-architecture)" == "amd64" ]]; then \
+        cd /opt && \
+        git clone --depth 1 --branch v2.2.0 https://github.com/thu-ml/SageAttention.git && \
+        cd SageAttention && \
+        EXT_PARALLEL=4 NVCC_APPEND_FLAGS="--threads 4" MAX_JOBS=8 python setup.py install; \
+    fi && \
     # Quick startup test in CPU mode to ensure requirements ready and startup succeeds
     cd /opt/workspace-internal/ComfyUI && \
     LD_PRELOAD=libtcmalloc_minimal.so.4 \
@@ -104,7 +112,7 @@ RUN \
     torch_versions_post="$({ pip list --format=freeze 2>/dev/null | grep -E '^(torch|torchvision|torchaudio|torchcodec)==' || :; } | sort)" && \
     [[ "$torch_versions_pre" = "$torch_versions_post" ]] || { echo "torch ecosystem version drift:"; diff <(echo "$torch_versions_pre") <(echo "$torch_versions_post"); exit 1; }
 
-ENV COMFYUI_ARGS="--disable-auto-launch --enable-cors-header --port 18188"
+ENV COMFYUI_ARGS="--disable-auto-launch --enable-cors-header --use-sage-attention --port 18188"
 
 # Install API wrapper
 RUN \
