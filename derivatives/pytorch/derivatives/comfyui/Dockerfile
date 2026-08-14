@@ -108,6 +108,9 @@ RUN \
         git clone --depth 1 --branch v2.2.0 https://github.com/thu-ml/SageAttention.git && \
         cd SageAttention && \
         TORCH_CUDA_ARCH_LIST="8.9;12.0" EXT_PARALLEL=1 NVCC_APPEND_FLAGS="--threads 1" MAX_JOBS=2 python setup.py install; \
+        cd /opt && \
+        rm -rf SageAttention && \
+        uv pip uninstall torchaudio; \
     fi && \
     # Quick startup test in CPU mode to ensure requirements ready and startup succeeds
     cd /opt/workspace-internal/ComfyUI && \
