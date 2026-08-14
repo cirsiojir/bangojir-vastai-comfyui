@@ -50,7 +50,7 @@ RUN \
     fi && \
     # Fail build on dependency resolution if matching version is unavailable
     uv pip install --no-cache-dir torch=="${PYTORCH_VERSION}" ${EXTRA_ACCEL_PKGS} --torch-backend "${PYTORCH_BACKEND}" && \
-    uv pip install --no-cache-dir torchaudio=="${PYTORCH_VERSION}" --torch-backend "${PYTORCH_BACKEND}" && \
+    uv pip install --no-cache-dir torchaudio --torch-backend "${PYTORCH_BACKEND}" && \
     # Get ComfyUI and install dependencies (torch should not be pinned to a specific version in the requirements.txt - If it is then our build will probably fail)
     cd /opt/workspace-internal/ && \
     git clone https://github.com/Comfy-Org/ComfyUI && \
