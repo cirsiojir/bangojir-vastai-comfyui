@@ -91,6 +91,10 @@ RUN \
     # Build SageAttention2 from source (compiled kernel, not a generic wheel) —
     # links against the exact torch/CUDA build already installed above.
     if [[ "$(dpkg --print-architecture)" == "amd64" ]]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends libcusparse-dev-13-2 libcublas-dev-13-2 libcusolver-dev-13-2 && \
+        apt-get clean && \
+        rm -rf /var/lib/apt/lists/* && \
         cd /opt && \
         git clone --depth 1 --branch v2.2.0 https://github.com/thu-ml/SageAttention.git && \
         cd SageAttention && \
