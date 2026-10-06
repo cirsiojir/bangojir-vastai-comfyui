@@ -6,7 +6,7 @@ on:
       COMFYUI_REF:
         description: "ComfyUI tag/ref to build"
         required: true
-        default: "v0.37.0"
+        default: "v0.39.0"
         type: string
       IMAGE_TAG:
         description: "Extra tag suffix (optional)"
