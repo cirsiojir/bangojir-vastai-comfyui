@@ -128,6 +128,18 @@ RUN \
     # torch-only check used to miss.
     torch_versions_post="$({ pip list --format=freeze 2>/dev/null | grep -E '^(torch|torchvision|torchaudio|torchcodec)==' || :; } | sort)" && \
     [[ "$torch_versions_pre" = "$torch_versions_post" ]] || { echo "torch ecosystem version drift:"; diff <(echo "$torch_versions_pre") <(echo "$torch_versions_post"); exit 1; }
+
+# NVIDIA VFX Python bindings (Video Super Resolution / denoise / deblur)
+# amd64 only: nvidia-vfx has no aarch64 wheel
+RUN \
+    set -euo pipefail && \
+    . /venv/main/bin/activate && \
+    if [[ "$(dpkg --print-architecture)" == "amd64" ]]; then \
+        torch_pre="$({ pip list --format=freeze 2>/dev/null | grep -E '^(torch|torchvision|torchaudio|torchcodec)==' || :; } | sort)" && \
+        uv pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com/ nvidia-vfx && \
+        torch_post="$({ pip list --format=freeze 2>/dev/null | grep -E '^(torch|torchvision|torchaudio|torchcodec)==' || :; } | sort)" && \
+        [[ "$torch_pre" = "$torch_post" ]] || { echo "torch ecosystem version drift:"; diff <(echo "$torch_pre") <(echo "$torch_post"); exit 1; }; \
+    fi
  
 ENV COMFYUI_ARGS="--disable-auto-launch --enable-cors-header --use-sage-attention --port 18188"
  
